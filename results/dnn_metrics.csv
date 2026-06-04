@@ -1,0 +1,2 @@
+model,accuracy,precision,recall,f1,auc_roc,confusion_matrix,epochs_trained,dataset
+dnn,0.9021739130434783,0.9117647058823529,0.9117647058823529,0.9117647058823529,0.9356767097082735,"[[73, 9], [9, 93]]",18,heart

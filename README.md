@@ -1,39 +1,138 @@
-# CVDPrediction - Use Machine Learning with Longitudinal EHR and Genetic Data to Improve Cardiovascular Prediction
+# Explainable Cardiovascular Screening Report
 
-This is the source code of paper
+An original Hack4Health Byte2Beat project that turns public cardiovascular data into an explainable AI screening report for early CVD risk awareness.
 
-Learning from Longitudinal Data in Electronic Health Record and Genetic Data to Improve Cardiovascular Event Prediction
+## Motivation
 
-**Accepted in Scientific Report (2018) **
+Cardiovascular disease remains one of the most complex and devastating health problems. This project makes the model output feel less like a raw classifier and more like an educational clinical-style report: it summarizes risk, compares model agreement, highlights risk-increasing and risk-lowering factors, and clearly separates AI screening from medical diagnosis.
 
-Manuscript at:https://www.nature.com/articles/s41598-018-36745-x
+This repository started from the public CVDPrediction codebase as a reference for model families, but the hackathon project uses public tabular and ECG datasets instead of the private EHR data from the paper.
 
-The project explores several machine learning and deep learning models on features extracted from EHR for Cardiovascular disease prediction.
+## Datasets
 
-Models include:
-* logistic regression, 
-* random forests, 
-* gradient boosting trees, 
-* convolutional neural networks (CNN) 
-* recurrent neural networks with long short-term memory (LSTM) units.
+The staged datasets are documented in `data/raw/DATA_SOURCES.md`.
 
-## How to run the code
+| File | Target | Role |
+| --- | --- | --- |
+| `data/raw/heart_processed.csv` | `HeartDisease` | Primary Streamlit and model-comparison dataset |
+| `data/raw/cardio_base.csv` | `cardio` | Larger cardio risk dataset for robustness experiments |
+| `data/raw/cardiac_failure_processed.csv` | `cardio` | Processed cardio backup dataset |
+| `data/raw/ecg_timeseries.csv` | Optional | Wide ECG timeseries data reserved for temporal modeling |
 
-(1) Put your own dataset under the data folder. In our paper, we compared two different feature extraction: a) using aggregated values for each feature and b) using temporal values (yearly) for each feature.
-We did not upload the raw data due to the privacy concern. We only upload the headers of the data that shows the feature structures.
+## Models
 
-data.csv should be the input data contains features and class labels. X.npy is the features, Y. npy is the labels.
+The current training pipeline uses `heart_processed.csv`, a stratified 80/20 split, median imputation, standard scaling, one-hot handling where needed, and SMOTE on the training set only.
 
-(2) The jupyter notebooks showed the result using different machine learning and LSTM models. 
+| Model | Notes |
+| --- | --- |
+| Logistic Regression | Balanced baseline classifier |
+| Random Forest | 200-tree ensemble |
+| XGBoost | Gradient boosting model used for SHAP explanations |
+| SVM RBF | Best held-out AUC in this run |
+| Feedforward DNN | Keras model with dropout and early stopping |
 
-(3) ./src contains several python files that implement several models and cross validations
+## Key Results
 
- src/classification/run_benchamrk.py runs the nested cross validations to compare the different machine learning models.
- 
- src/tune_DNN.py, src/tune_CNN.py and src/tune_LSTM to run the cross validations on deep learning models.
- 
+Held-out test metrics from the current run:
 
+| Rank | Model | Accuracy | Precision | Recall | F1 | AUC-ROC |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | SVM RBF | 0.902 | 0.889 | 0.941 | 0.914 | 0.945 |
+| 2 | DNN | 0.902 | 0.912 | 0.912 | 0.912 | 0.936 |
+| 3 | XGBoost | 0.880 | 0.900 | 0.882 | 0.891 | 0.935 |
+| 4 | Random Forest | 0.886 | 0.893 | 0.902 | 0.898 | 0.932 |
+| 5 | Logistic Regression | 0.891 | 0.880 | 0.931 | 0.905 | 0.926 |
 
-** Please cite our paper if you use the code **:
+Top SHAP-ranked risk factors from XGBoost are currently `ST_Slope_Up`, `Cholesterol`, `ChestPainType_NAP`, `ExerciseAngina_Y`, and `ST_Slope_Flat`. In the Streamlit demo, these are translated into a patient-facing AI screening report with vitals, risk band, DNN comparison, top risk drivers, protective factors, and a downloadable text summary.
 
-Zhao J, Feng Q, Wu P, Lupu R, Wilke RA, Wells QS, Denny JC, Wei W-Q. Learning from Longitudinal Electronic Health Record and Genetic Data to Improve Cardiovascular Event Prediction. Scientific Reports. 2019; 9(1):717 doi:10.1038/s41598-018-36745-x 
+## Run Locally
+
+```bash
+pip install -r requirements.txt
+python models/train_classical.py --dataset heart
+python models/train_dnn.py --dataset heart
+python src/interpret.py --dataset heart
+streamlit run app/streamlit_app.py
+```
+
+Then open `http://localhost:8501`.
+
+## Quality Tests
+
+Run the advanced submission tests with:
+
+```bash
+python -m unittest tests.test_advanced_quality -v
+```
+
+The suite checks staged data integrity, leakage-safe preprocessing, saved model artifact contracts, prediction probability bounds, Streamlit preprocessing parity, medical report output sections, metric thresholds, SHAP feature importance sanity, and notebook/report readiness.
+
+## Notebook Order
+
+1. `notebooks/eda.ipynb`
+2. `models/train_classical.py`
+3. `models/train_dnn.py`
+4. `notebooks/model_comparison.ipynb`
+5. `notebooks/shap_analysis.ipynb`
+6. `src/interpret.py`
+7. `app/streamlit_app.py`
+
+The written project report is available at `report/report.md`.
+
+## Project Structure
+
+```text
+CVD Kaggle/
+|-- app/
+|   `-- streamlit_app.py
+|-- data/
+|   `-- raw/
+|       |-- DATA_SOURCES.md
+|       |-- cardiac_failure_processed.csv
+|       |-- cardio_base.csv
+|       |-- ecg_timeseries.csv
+|       `-- heart_processed.csv
+|-- models/
+|   |-- saved/
+|   |-- train_classical.py
+|   `-- train_dnn.py
+|-- notebooks/
+|   |-- eda.ipynb
+|   |-- model_comparison.ipynb
+|   `-- shap_analysis.ipynb
+|-- report/
+|   `-- report.md
+|-- results/
+|   |-- classical_model_metrics.csv
+|   |-- dnn_metrics.csv
+|   |-- dnn_training_curves.png
+|   `-- feature_importance.csv
+|-- src/
+|   |-- interpret.py
+|   `-- preprocess.py
+|-- tests/
+|   `-- test_advanced_quality.py
+|-- kaggle_submission.ipynb
+|-- requirements.txt
+`-- README.md
+```
+
+## Streamlit Demo
+
+The demo accepts patient vitals in the sidebar and returns a clinical-style educational screening report:
+
+- A 0-100% risk score
+- Low, moderate, or high risk category
+- XGBoost primary prediction and DNN comparison when available
+- Clinical-style summary and suggested follow-up
+- Patient vitals table
+- A SHAP waterfall plot for the individual prediction
+- Top risk-increasing and risk-lowering factors
+- Downloadable screening report
+- Educational-use disclaimer
+
+## Citation
+
+Reference repository and model-family inspiration:
+
+Zhao J, Feng Q, Wu P, Lupu R, Wilke RA, Wells QS, Denny JC, Wei W-Q. Learning from Longitudinal Electronic Health Record and Genetic Data to Improve Cardiovascular Event Prediction. Scientific Reports. 2019; 9(1):717. doi:10.1038/s41598-018-36745-x
