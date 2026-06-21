@@ -2,6 +2,8 @@
 
 An original Hack4Health Byte2Beat project that turns public cardiovascular data into an explainable AI screening report for early CVD risk awareness.
 
+**Last Updated:** June 2026
+
 ## Motivation
 
 Cardiovascular disease remains one of the most complex and devastating health problems. This project makes the model output feel less like a raw classifier and more like an educational clinical-style report: it summarizes risk, compares model agreement, highlights risk-increasing and risk-lowering factors, and clearly separates AI screening from medical diagnosis.
