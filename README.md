@@ -6,8 +6,6 @@ An original Hack4Health Byte2Beat project that turns public cardiovascular data 
 
 Cardiovascular disease remains one of the most complex and devastating health problems. This project makes the model output feel less like a raw classifier and more like an educational clinical-style report: it summarizes risk, compares model agreement, highlights risk-increasing and risk-lowering factors, and clearly separates AI screening from medical diagnosis.
 
-This repository started from the public CVDPrediction codebase as a reference for model families, but the hackathon project uses public tabular and ECG datasets instead of the private EHR data from the paper.
-
 ## Datasets
 
 The staged datasets are documented in `data/raw/DATA_SOURCES.md`.
@@ -131,8 +129,4 @@ The demo accepts patient vitals in the sidebar and returns a clinical-style educ
 - Downloadable screening report
 - Educational-use disclaimer
 
-## Citation
 
-Reference repository and model-family inspiration:
-
-Zhao J, Feng Q, Wu P, Lupu R, Wilke RA, Wells QS, Denny JC, Wei W-Q. Learning from Longitudinal Electronic Health Record and Genetic Data to Improve Cardiovascular Event Prediction. Scientific Reports. 2019; 9(1):717. doi:10.1038/s41598-018-36745-x
