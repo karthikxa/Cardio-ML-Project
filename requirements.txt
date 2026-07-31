@@ -1,0 +1,12 @@
+﻿# Updated June 2026
+pandas
+numpy
+scikit-learn
+xgboost
+shap
+matplotlib
+seaborn
+tensorflow
+streamlit
+imbalanced-learn
+jupyter

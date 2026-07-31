@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+.ipynb_checkpoints/
+.DS_Store
+
+.streamlit/
+.venv/
+venv/
+env/
+
+*.log
+
+# Large files exceeding GitHub size limit
+cvd_kaggle_submission.zip
+data/raw/ecg_timeseries.csv
+
