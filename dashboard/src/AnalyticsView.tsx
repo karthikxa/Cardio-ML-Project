@@ -563,107 +563,220 @@ export default function AnalyticsView({ onNavigateToPatient }: AnalyticsViewProp
       {/* Section 2.5: Analytics Trend Graphs */}
       {monthlyTrend.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          {/* Average Risk Score Trend */}
-          <SectionCard title="Average Risk Score Trend">
+
+          {/* ── Average Risk Score Trend ── Clean single-series risk trend ── */}
+          <div style={{ background: '#ffffff', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '24px 24px 18px 24px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1e293b', margin: 0, letterSpacing: '-0.2px' }}>
+                  Average Risk Score Trend
+                </h3>
+                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>Monthly average across all patient assessments</div>
+              </div>
+              <div style={{ fontSize: '11px', color: '#475569', display: 'flex', gap: '18px', alignItems: 'center' }}>
+                {/* Risk score legend item */}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="24" height="12">
+                    <line x1="0" y1="6" x2="24" y2="6" stroke="#0891b2" strokeWidth="2.5" />
+                    <circle cx="12" cy="6" r="3.5" fill="#ffffff" stroke="#0891b2" strokeWidth="2" />
+                  </svg>
+                  <span style={{ color: '#334155', fontWeight: 600 }}>Avg Risk score</span>
+                </span>
+              </div>
+            </div>
+
             {(() => {
               const data = monthlyTrend;
-              const W = 560; const H = 200;
-              const padL = 40; const padR = 16; const padT = 16; const padB = 32;
+              const W = 540; const H = 220;
+              const padL = 48; const padR = 16; const padT = 24; const padB = 32;
               const plotW = W - padL - padR; const plotH = H - padT - padB;
-              const maxRisk = 100; const minRisk = 0;
+
+              // Fixed Y-ticks 20 to 90 matching graph scale
+              const yMin = 20;
+              const yMax = 90;
+              const yTicks = [20, 30, 40, 50, 60, 70, 80, 90];
+
+              const toY = (val: number) => padT + (1 - (val - yMin) / (yMax - yMin)) * plotH;
+
+              // Risk score points
               const pts = data.map((d, i) => ({
                 x: padL + (data.length === 1 ? plotW / 2 : (i / (data.length - 1)) * plotW),
-                y: padT + (1 - (d.avgRisk - minRisk) / (maxRisk - minRisk)) * plotH,
-                avg: d.avgRisk, label: d.label, month: d.month,
+                y: toY(d.avgRisk),
+                avg: d.avgRisk,
+                label: d.label,
               }));
-              const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
-              const areaD = pathD + ` L${pts[pts.length - 1].x},${padT + plotH} L${pts[0].x},${padT + plotH} Z`;
+
+              // Smooth bezier path for risk line
+              const riskPath = pts.reduce((acc, p, i) => {
+                if (i === 0) return `M${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+                const prev = pts[i - 1];
+                const cpx = (prev.x + p.x) / 2;
+                return acc + ` C${cpx.toFixed(1)},${prev.y.toFixed(1)} ${cpx.toFixed(1)},${p.y.toFixed(1)} ${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+              }, '');
+
+              // Translucent area fill block extending down to bottom of plot
+              const areaPath = riskPath + ` L${pts[pts.length - 1].x},${padT + plotH} L${pts[0].x},${padT + plotH} Z`;
+
               return (
-                <>
-                  <div style={{ display: 'flex', gap: '16px', marginBottom: '8px', fontSize: '10px', color: '#6b7280' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 10, height: 3, background: '#2563eb', borderRadius: 2, display: 'inline-block' }} />Avg Risk Score</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 10, height: 3, background: '#f59e0b', borderRadius: 2, display: 'inline-block', borderTop: '1.5px dashed #f59e0b' }} />High Threshold (70%)</span>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {/* Rotated Y-axis label */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', flexShrink: 0 }}>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 600, color: '#0891b2',
+                      whiteSpace: 'nowrap', transform: 'rotate(-90deg)',
+                      transformOrigin: 'center', display: 'block'
+                    }}>Risk score (%)</span>
                   </div>
-                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
-                    {[0, 25, 50, 75, 100].map(v => (
-                      <g key={v}>
-                        <line x1={padL} y1={padT + (1 - v / 100) * plotH} x2={padL + plotW} y2={padT + (1 - v / 100) * plotH} stroke="#f3f4f6" strokeWidth="1" />
-                        <text x={padL - 6} y={padT + (1 - v / 100) * plotH + 3} textAnchor="end" fontSize="9" fill="#9ca3af">{v}%</text>
-                      </g>
-                    ))}
-                    <line x1={padL} y1={padT + (1 - 70 / 100) * plotH} x2={padL + plotW} y2={padT + (1 - 70 / 100) * plotH} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="6,4" opacity="0.6" />
-                    <path d={areaD} fill="url(#riskGradient)" opacity="0.15" />
-                    <path d={pathD} fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-                    {pts.map((p, i) => (
-                      <g key={i}>
-                        <circle cx={p.x} cy={p.y} r="4" fill="#2563eb" stroke="#fff" strokeWidth="2" />
-                        <text x={p.x} y={padT + plotH + 14} textAnchor="middle" fontSize="8" fill="#6b7280">{p.label}</text>
-                        <text x={p.x} y={p.y - 8} textAnchor="middle" fontSize="8" fill="#2563eb" fontWeight="600">{p.avg}%</text>
-                      </g>
-                    ))}
+
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible', display: 'block', flex: 1 }}>
                     <defs>
-                      <linearGradient id="riskGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#2563eb" stopOpacity="0.4" />
-                        <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+                      <linearGradient id="exactTealFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#0891b2" stopOpacity="0.10" />
+                        <stop offset="100%" stopColor="#0891b2" stopOpacity="0.04" />
                       </linearGradient>
                     </defs>
-                  </svg>
-                </>
-              );
-            })()}
-          </SectionCard>
 
-          {/* Risk Level Distribution Over Time */}
-          <SectionCard title="Risk Level Distribution Over Time">
-            {(() => {
-              const data = monthlyTrend;
-              const W = 560; const H = 200;
-              const padL = 40; const padR = 16; const padT = 16; const padB = 32;
-              const plotW = W - padL - padR; const plotH = H - padT - padB;
-              const maxTotal = Math.max(...data.map(d => d.high + d.moderate + d.low), 1);
-              const barW = Math.min(28, (plotW / data.length) * 0.6);
-              const gap = plotW / data.length;
-              return (
-                <>
-                  <div style={{ display: 'flex', gap: '14px', marginBottom: '8px', fontSize: '10px', color: '#6b7280' }}>
-                    {[{ label: 'High Risk', color: '#dc2626' }, { label: 'Moderate', color: '#f59e0b' }, { label: 'Low Risk', color: '#059669' }].map(l => (
-                      <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 8, height: 8, borderRadius: 2, background: l.color, display: 'inline-block' }} />{l.label}</span>
-                    ))}
-                  </div>
-                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
-                    {[0, 0.25, 0.5, 0.75, 1].map(frac => {
-                      const v = Math.round(maxTotal * frac);
+                    {/* Horizontal Y gridlines & labels */}
+                    {yTicks.map((v) => {
+                      const ty = toY(v);
                       return (
                         <g key={v}>
-                          <line x1={padL} y1={padT + (1 - frac) * plotH} x2={padL + plotW} y2={padT + (1 - frac) * plotH} stroke="#f3f4f6" strokeWidth="1" />
-                          <text x={padL - 6} y={padT + (1 - frac) * plotH + 3} textAnchor="end" fontSize="9" fill="#9ca3af">{v}</text>
+                          <line x1={padL} y1={ty} x2={padL + plotW} y2={ty} stroke="#f1f5f9" strokeWidth="1" />
+                          <text x={padL - 10} y={ty + 3.5} textAnchor="end" fontSize="10" fill="#94a3b8" fontFamily="system-ui, sans-serif">{v}</text>
                         </g>
                       );
                     })}
-                    {data.map((d, i) => {
-                      const x = padL + gap * i + gap / 2 - barW / 2;
-                      const hHigh = (d.high / maxTotal) * plotH;
-                      const hMod = (d.moderate / maxTotal) * plotH;
-                      const hLow = (d.low / maxTotal) * plotH;
-                      const yLow = padT + plotH - hLow;
-                      const yMod = yLow - hMod;
-                      const yHigh = yMod - hHigh;
-                      return (
-                        <g key={i}>
-                          {d.low > 0 && <rect x={x} y={yLow} width={barW} height={hLow} fill="#059669" rx="2" />}
-                          {d.moderate > 0 && <rect x={x} y={yMod} width={barW} height={hMod} fill="#f59e0b" rx="2" />}
-                          {d.high > 0 && <rect x={x} y={yHigh} width={barW} height={hHigh} fill="#dc2626" rx="2" />}
-                          <text x={x + barW / 2} y={padT + plotH + 14} textAnchor="middle" fontSize="8" fill="#6b7280">{d.label}</text>
-                          <text x={x + barW / 2} y={Math.min(yHigh, yMod, yLow) - 4} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600">{d.high + d.moderate + d.low}</text>
-                        </g>
-                      );
-                    })}
+
+                    {/* Y-axis left vertical border line */}
+                    <line x1={padL} y1={padT} x2={padL} y2={padT + plotH} stroke="#e2e8f0" strokeWidth="1" />
+
+                    {/* X-axis bottom baseline line */}
+                    <line x1={padL} y1={padT + plotH} x2={padL + plotW} y2={padT + plotH} stroke="#e2e8f0" strokeWidth="1" />
+
+                    {/* Translucent teal background fill */}
+                    <path d={areaPath} fill="url(#exactTealFill)" />
+
+                    {/* Risk score teal line */}
+                    <path d={riskPath} fill="none" stroke="#0891b2" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+
+                    {/* Risk score data points & cyan percentage labels */}
+                    {pts.map((p, i) => (
+                      <g key={i}>
+                        {/* X-axis tick label */}
+                        <text x={p.x} y={padT + plotH + 18} textAnchor="middle" fontSize="10" fill="#64748b" fontFamily="system-ui, sans-serif">{p.label}</text>
+
+                        {/* Circle marker (white center, cyan border) */}
+                        <circle cx={p.x} cy={p.y} r="4.5" fill="#ffffff" stroke="#0891b2" strokeWidth="2" />
+
+                        {/* Cyan percentage value label above node */}
+                        <text x={p.x} y={p.y - 9} textAnchor="middle" fontSize="10.5" fill="#0891b2" fontWeight="700" fontFamily="system-ui, sans-serif">{p.avg}%</text>
+                      </g>
+                    ))}
                   </svg>
-                </>
+                </div>
               );
             })()}
-          </SectionCard>
+          </div>
 
+          {/* ── Risk Level Distribution Over Time ── Professional stacked bar chart */}
+          <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px 20px 14px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', letterSpacing: '-0.1px' }}>Risk Level Distribution Over Time</div>
+                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Patient count by risk category per month</div>
+              </div>
+              <div style={{ fontSize: '10px', color: '#6b7280', display: 'flex', gap: '12px', alignItems: 'center', paddingTop: '2px' }}>
+                {[{ label: 'High Risk', color: '#be123c' }, { label: 'Moderate', color: '#b45309' }, { label: 'Low Risk', color: '#047857' }].map(l => (
+                  <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ width: 9, height: 9, borderRadius: '2px', background: l.color, display: 'inline-block', flexShrink: 0 }} />
+                    {l.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+            {(() => {
+              const data = monthlyTrend;
+              const W = 540; const H = 190;
+              const padL = 44; const padR = 20; const padT = 14; const padB = 36;
+              const plotW = W - padL - padR; const plotH = H - padT - padB;
+              const maxTotal = Math.max(...data.map(d => d.high + d.moderate + d.low), 1);
+              // Nice round Y-axis max
+              const yMax = Math.ceil(maxTotal / 5) * 5 || 5;
+              const barW = Math.max(10, Math.min(32, (plotW / data.length) * 0.55));
+              const step = plotW / Math.max(data.length, 1);
+              const yTicks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(yMax * f));
+              return (
+                <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible', display: 'block' }}>
+                  {/* Y gridlines + labels */}
+                  {yTicks.map((v, ti) => {
+                    const ty = padT + (1 - v / yMax) * plotH;
+                    return (
+                      <g key={ti}>
+                        <line x1={padL} y1={ty} x2={padL + plotW} y2={ty}
+                          stroke={v === 0 ? '#d1d5db' : '#f3f4f6'} strokeWidth="1" />
+                        <text x={padL - 8} y={ty + 4} textAnchor="end" fontSize="9.5" fill="#9ca3af" fontFamily="system-ui, sans-serif">{v}</text>
+                      </g>
+                    );
+                  })}
+                  {/* X-axis baseline */}
+                  <line x1={padL} y1={padT + plotH} x2={padL + plotW} y2={padT + plotH} stroke="#d1d5db" strokeWidth="1" />
+                  {/* Stacked bars */}
+                  {data.map((d, i) => {
+                    const cx = padL + step * i + step / 2;
+                    const x = cx - barW / 2;
+                    const total = d.high + d.moderate + d.low;
+                    const hLow  = (d.low      / yMax) * plotH;
+                    const hMod  = (d.moderate / yMax) * plotH;
+                    const hHigh = (d.high     / yMax) * plotH;
+                    const yBase = padT + plotH;
+                    const yLowTop  = yBase - hLow;
+                    const yModTop  = yLowTop - hMod;
+                    const yHighTop = yModTop - hHigh;
+                    const topY = total > 0 ? yHighTop : yBase;
+                    return (
+                      <g key={i}>
+                        {/* Low Risk segment (bottom) */}
+                        {d.low > 0 && (
+                          <rect x={x} y={yLowTop} width={barW} height={hLow}
+                            fill="#047857" rx={d.moderate === 0 && d.high === 0 ? '3' : '0'}
+                            style={{ rx: '0' }}
+                          />
+                        )}
+                        {/* Moderate segment (middle) */}
+                        {d.moderate > 0 && (
+                          <rect x={x} y={yModTop} width={barW} height={hMod}
+                            fill="#b45309" rx={d.high === 0 ? '3' : '0'}
+                          />
+                        )}
+                        {/* High Risk segment (top) — rounded top corners */}
+                        {d.high > 0 && (
+                          <path
+                            d={`M${x+3},${yHighTop} Q${x},${yHighTop} ${x},${yHighTop+3} L${x},${yModTop > yHighTop ? yModTop : yHighTop + hHigh} L${x+barW},${yModTop > yHighTop ? yModTop : yHighTop + hHigh} L${x+barW},${yHighTop+3} Q${x+barW},${yHighTop} ${x+barW-3},${yHighTop} Z`}
+                            fill="#be123c"
+                          />
+                        )}
+                        {/* Rounded top on bar when no high risk */}
+                        {d.high === 0 && d.moderate > 0 && (
+                          <path
+                            d={`M${x+3},${yModTop} Q${x},${yModTop} ${x},${yModTop+3} L${x},${yModTop+3} Z M${x+barW-3},${yModTop} Q${x+barW},${yModTop} ${x+barW},${yModTop+3} L${x+barW},${yModTop+3} Z`}
+                            fill="#b45309"
+                          />
+                        )}
+                        {/* X tick + label */}
+                        <line x1={cx} y1={padT + plotH} x2={cx} y2={padT + plotH + 4} stroke="#d1d5db" strokeWidth="1" />
+                        <text x={cx} y={padT + plotH + 16} textAnchor="middle" fontSize="9" fill="#6b7280" fontFamily="system-ui, sans-serif">{d.label}</text>
+                        {/* Total count above bar */}
+                        {total > 0 && (
+                          <text x={cx} y={topY - 5} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="700" fontFamily="system-ui, sans-serif">{total}</text>
+                        )}
+                      </g>
+                    );
+                  })}
+                </svg>
+              );
+            })()}
+          </div>
 
         </div>
       )}
@@ -717,7 +830,6 @@ export default function AnalyticsView({ onNavigateToPatient }: AnalyticsViewProp
                 <SortHeader field="age">Age</SortHeader>
                 <th style={{ textAlign: 'left', fontSize: '10px', color: '#6b7280', fontWeight: 700, padding: '8px 10px', borderBottom: '2px solid #e5e7eb', letterSpacing: '0.3px', textTransform: 'uppercase' }}>Sex</th>
                 <SortHeader field="riskScore">Risk Score</SortHeader>
-                <th style={{ textAlign: 'left', fontSize: '10px', color: '#6b7280', fontWeight: 700, padding: '8px 10px', borderBottom: '2px solid #e5e7eb', letterSpacing: '0.3px', textTransform: 'uppercase' }}>Flags</th>
                 <th style={{ textAlign: 'left', fontSize: '10px', color: '#6b7280', fontWeight: 700, padding: '8px 10px', borderBottom: '2px solid #e5e7eb', letterSpacing: '0.3px', textTransform: 'uppercase' }}>Referral</th>
                 <SortHeader field="lastAssessed">Last Assessed</SortHeader>
                 <th style={{ textAlign: 'right', fontSize: '10px', color: '#6b7280', fontWeight: 700, padding: '8px 10px', borderBottom: '2px solid #e5e7eb', letterSpacing: '0.3px', textTransform: 'uppercase' }}>Profile</th>
@@ -733,11 +845,6 @@ export default function AnalyticsView({ onNavigateToPatient }: AnalyticsViewProp
                 const a = getLatestAssessment(p);
                 const rc = riskBadgeColor(a.riskScore);
                 const daysAgo = daysSince(a.date);
-                const flags: string[] = [];
-                if (a.restingBP >= 140) flags.push('🫀');
-                if (a.cholesterol > 240) flags.push('🔴');
-                if (a.restingEcg !== 'Normal') flags.push('⚡');
-                if (a.maxHR < 100) flags.push('📉');
                 const refColor = a.referralStatus === 'pending' ? '#d97706' : a.referralStatus === 'referred' ? '#2563eb' : a.referralStatus === 'seen' ? '#059669' : '#9ca3af';
                 const refBg = a.referralStatus === 'pending' ? '#fffbeb' : a.referralStatus === 'referred' ? '#eff6ff' : a.referralStatus === 'seen' ? '#ecfdf5' : '#f9fafb';
                 return (
@@ -750,7 +857,6 @@ export default function AnalyticsView({ onNavigateToPatient }: AnalyticsViewProp
                     <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6' }}>
                       <span style={{ background: rc.bg, color: rc.color, padding: '2px 8px', borderRadius: '4px', fontWeight: 700, fontSize: '10px' }}>{a.riskScore}%</span>
                     </td>
-                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6', fontSize: '12px' }}>{flags.join(' ')}</td>
                     <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6' }}>
                       <span style={{ background: refBg, color: refColor, padding: '2px 8px', borderRadius: '4px', fontWeight: 600, fontSize: '10px', textTransform: 'capitalize' }}>{a.referralStatus}</span>
                     </td>

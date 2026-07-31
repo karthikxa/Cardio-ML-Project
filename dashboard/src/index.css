@@ -1031,29 +1031,179 @@ body {
   }
 }
 
-/* Premium active sidebar menu highlights */
-.sidebar-menu-item.active.active-explainability {
-  background: rgba(124, 58, 237, 0.35) !important;
-  border: 1px solid rgba(139, 92, 246, 0.6) !important;
-  color: #ffffff !important;
-  box-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.25), inset 0 0 8px 0 rgba(255, 255, 255, 0.1) !important;
+
+/* ── Global Dark Mode Styling (Claude/ChatGPT Slate Theme) ── */
+body.dark-mode {
+  --bg: #090d16;
+  --panel: #131b2e;
+  --line: #1e293b;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  background-color: #090d16 !important;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+    radial-gradient(at 20% 40%, rgba(6, 182, 212, 0.08) 0px, transparent 40%) !important;
+  color: #f8fafc !important;
 }
 
-.sidebar-menu-item.active.active-explainability .sidebar-menu-icon {
-  color: #d8b4fe !important;
-  filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6));
+/* Sidebar Dark Theme */
+body.dark-mode .sidebar {
+  background: #0f172a !important;
+  border-right: 1px solid #1e293b !important;
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.3) !important;
 }
 
-.sidebar-menu-item.active:not(.active-explainability) {
+body.dark-mode .sidebar-logo-title {
+  color: #f8fafc !important;
+}
+
+body.dark-mode .sidebar-logo-subtitle {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .sidebar-search-input {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode .sidebar-search-input::placeholder {
+  color: #64748b !important;
+}
+
+body.dark-mode .sidebar-search-icon,
+body.dark-mode .sidebar-search-shortcut {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .sidebar-menu-item {
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode .sidebar-menu-item:hover {
   background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: none !important;
+  color: #ffffff !important;
 }
 
-.sidebar-divider {
-  height: 20px;
-  background-color: transparent !important;
-  margin: 0;
+body.dark-mode .sidebar-menu-item.active {
+  background: #1e293b !important;
+  color: #ffffff !important;
+  border-color: #334155 !important;
 }
+
+/* Topbar Dark Theme */
+body.dark-mode .topbar-welcome {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .topbar-pill {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* Universal Card & Panel Dark Background Overrides */
+body.dark-mode main div[style*="background: #ffffff"],
+body.dark-mode main div[style*="background: '#ffffff'"],
+body.dark-mode main div[style*="background: rgb(255, 255, 255)"],
+body.dark-mode main div[style*="background:#ffffff"],
+body.dark-mode main div[style*="background: white"],
+body.dark-mode main div[style*="background: 'white'"],
+body.dark-mode main section[style*="background: #ffffff"],
+body.dark-mode main section[style*="background: '#ffffff'"] {
+  background: #131b2e !important;
+  border-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+/* Card Titles & Headings Dark Mode Contrast */
+body.dark-mode main h1,
+body.dark-mode main h2,
+body.dark-mode main h3,
+body.dark-mode main h4,
+body.dark-mode main h5,
+body.dark-mode main h6,
+body.dark-mode main strong,
+body.dark-mode main th {
+  color: #f8fafc !important;
+}
+
+body.dark-mode main p,
+body.dark-mode main label,
+body.dark-mode main td {
+  color: #cbd5e1;
+}
+
+/* High contrast for dark text elements in dark mode */
+body.dark-mode main div[style*="color: '#111827'"],
+body.dark-mode main div[style*="color: '#0f172a'"],
+body.dark-mode main div[style*="color: '#1e293b'"],
+body.dark-mode main div[style*="color: '#334155'"],
+body.dark-mode main div[style*="color: '#374151'"],
+body.dark-mode main div[style*="color: #111827"],
+body.dark-mode main div[style*="color: #0f172a"],
+body.dark-mode main div[style*="color: #1e293b"],
+body.dark-mode main span[style*="color: '#111827'"],
+body.dark-mode main span[style*="color: '#0f172a'"],
+body.dark-mode main span[style*="color: '#1e293b'"],
+body.dark-mode main span[style*="color: '#334155'"],
+body.dark-mode main span[style*="color: '#374151'"],
+body.dark-mode main span[style*="color: #111827"],
+body.dark-mode main span[style*="color: #0f172a"],
+body.dark-mode main span[style*="color: #1e293b"] {
+  color: #f8fafc !important;
+}
+
+/* Muted subtitles in dark mode */
+body.dark-mode main div[style*="color: '#6b7280'"],
+body.dark-mode main div[style*="color: '#64748b'"],
+body.dark-mode main div[style*="color: '#94a3b8'"],
+body.dark-mode main div[style*="color: '#9ca3af'"],
+body.dark-mode main div[style*="color: #6b7280"],
+body.dark-mode main div[style*="color: #64748b"],
+body.dark-mode main span[style*="color: '#6b7280'"],
+body.dark-mode main span[style*="color: '#64748b'"],
+body.dark-mode main span[style*="color: '#94a3b8'"],
+body.dark-mode main span[style*="color: '#9ca3af'"],
+body.dark-mode main span[style*="color: #6b7280"],
+body.dark-mode main span[style*="color: #64748b"] {
+  color: #94a3b8 !important;
+}
+
+/* Table styling in Dark Mode */
+body.dark-mode table {
+  background: #131b2e !important;
+}
+
+body.dark-mode table tr {
+  border-bottom-color: #1e293b !important;
+}
+
+body.dark-mode table thead tr,
+body.dark-mode table tr[style*="background: '#f8fafc'"],
+body.dark-mode table tr[style*="background: #f8fafc"],
+body.dark-mode table tr[style*="background: '#f9fafb'"],
+body.dark-mode table tr[style*="background: #f9fafb"] {
+  background: #0f172a !important;
+}
+
+body.dark-mode table tbody tr:hover {
+  background: #1e293b !important;
+}
+
+/* Inputs, Selects & Textareas Dark Mode */
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode input::placeholder {
+  color: #64748b !important;
+}
+
+
 
 

@@ -4,6 +4,7 @@ import {
   Search, 
   ChevronDown, 
   Sun, 
+  Moon,
   Calendar, 
   Bell, 
   Clipboard, 
@@ -44,6 +45,7 @@ import {
 import heart3d from './assets/heart_3d.png';
 import drAlex from './assets/dr_alex.png';
 import AnalyticsView from './AnalyticsView';
+import PatientHistoryView from './PatientHistoryView';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 const LIVE_REFRESH_MS = 30000;
@@ -489,7 +491,7 @@ const GoogleFitWidget: React.FC = () => {
   );
 };
 
-// Live 60FPS Animated ECG Signal Canvas Component
+// Live Medical Grade ECG Signal Canvas Component (Theme Responsive)
 const LiveEcgCanvas: React.FC = () => {
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
 
@@ -505,39 +507,67 @@ const LiveEcgCanvas: React.FC = () => {
     const render = () => {
       const w = canvas.width;
       const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
+      const isDark = document.body.classList.contains('dark-mode');
 
-      // Faint baseline
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
+      // 1. Light Medical Grid Background in Light Theme (#f0fdfa), Dark in Dark Theme (#061224)
+      ctx.fillStyle = isDark ? '#061224' : '#f0fdfa';
+      ctx.fillRect(0, 0, w, h);
+
+      // 2. Draw Medical Graph Paper Grid Lines (Horizontal & Vertical)
+      ctx.strokeStyle = isDark ? 'rgba(6, 182, 212, 0.12)' : 'rgba(8, 145, 178, 0.15)';
       ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, h / 2);
-      ctx.lineTo(w, h / 2);
-      ctx.stroke();
 
-      // Glowing ECG Line
-      ctx.strokeStyle = '#06b6d4';
-      ctx.lineWidth = 2;
-      ctx.shadowColor = '#06b6d4';
-      ctx.shadowBlur = 6;
+      const gridSize = 12;
+      // Vertical grid lines
+      for (let x = 0; x <= w; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      // Horizontal grid lines
+      for (let y = 0; y <= h; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // 3. Draw Vivid Cyan/Teal ECG PQRST Waveform
+      ctx.strokeStyle = isDark ? '#00f2fe' : '#0891b2';
+      ctx.lineWidth = 2.2;
+      ctx.shadowColor = isDark ? '#00f2fe' : 'rgba(8, 145, 178, 0.35)';
+      ctx.shadowBlur = isDark ? 8 : 4;
       ctx.beginPath();
 
-      offset = (offset + 1.5) % 120;
+      const period = 140; // Beat interval in pixels
+      offset = (offset + 1.8) % period;
+
+      const baseY = h * 0.54; // Baseline centered with top/bottom margin
 
       for (let x = 0; x < w; x++) {
-        const xPos = (x + offset) % 120;
-        let y = h / 2;
+        const xPos = (x + offset) % period;
+        let y = baseY;
 
-        if (xPos > 35 && xPos < 42) {
-          y -= 4; // P wave
-        } else if (xPos >= 42 && xPos < 46) {
-          y += 5; // Q wave
-        } else if (xPos >= 46 && xPos < 54) {
-          y -= 22; // R peak
-        } else if (xPos >= 54 && xPos < 60) {
-          y += 10; // S wave
-        } else if (xPos >= 70 && xPos < 82) {
-          y -= 6; // T wave
+        if (xPos >= 30 && xPos < 42) {
+          // P wave (small bump)
+          const t = (xPos - 30) / 12;
+          y -= Math.sin(t * Math.PI) * 4;
+        } else if (xPos >= 42 && xPos < 48) {
+          // Q wave (small dip)
+          y += 3.5;
+        } else if (xPos >= 48 && xPos < 58) {
+          // R PEAK (Tall sharp spike up, scaled to fit fully inside canvas)
+          const t = (xPos - 48) / 10;
+          y -= Math.sin(t * Math.PI) * (h * 0.38);
+        } else if (xPos >= 58 && xPos < 66) {
+          // S wave (dip down, fully within canvas)
+          const t = (xPos - 58) / 8;
+          y += Math.sin(t * Math.PI) * (h * 0.20);
+        } else if (xPos >= 78 && xPos < 96) {
+          // T wave (medium rounded bump)
+          const t = (xPos - 78) / 18;
+          y -= Math.sin(t * Math.PI) * 6.5;
         }
 
         if (x === 0) {
@@ -548,6 +578,9 @@ const LiveEcgCanvas: React.FC = () => {
       }
       ctx.stroke();
 
+      // Reset shadow for performance
+      ctx.shadowBlur = 0;
+
       animId = requestAnimationFrame(render);
     };
 
@@ -555,7 +588,185 @@ const LiveEcgCanvas: React.FC = () => {
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  return <canvas ref={canvasRef} width={280} height={40} style={{ width: '100%', height: '40px', borderRadius: '4px' }} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      width={280}
+      height={48}
+      style={{
+        width: '100%',
+        height: '48px',
+        borderRadius: '6px',
+        border: '1px solid #cff4fc',
+        boxShadow: 'inset 0 0 6px rgba(8, 145, 178, 0.08)',
+        display: 'block'
+      }}
+    />
+  );
+};
+
+// Live Green PPG Pulse Oximetry Waveform Canvas (Theme Responsive)
+const LivePpgCanvas: React.FC = () => {
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+    let offset = 0;
+
+    const render = () => {
+      const w = canvas.width;
+      const h = canvas.height;
+      const isDark = document.body.classList.contains('dark-mode');
+
+      ctx.fillStyle = isDark ? '#061224' : '#f0fdf4';
+      ctx.fillRect(0, 0, w, h);
+
+      // Grid
+      ctx.strokeStyle = isDark ? 'rgba(34, 197, 94, 0.12)' : 'rgba(22, 163, 74, 0.12)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= w; x += 12) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = 0; y <= h; y += 12) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      // Smooth PPG Wave
+      ctx.strokeStyle = isDark ? '#4ade80' : '#16a34a';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = isDark ? '#4ade80' : 'rgba(22, 163, 74, 0.3)';
+      ctx.shadowBlur = isDark ? 6 : 3;
+      ctx.beginPath();
+
+      const period = 100;
+      offset = (offset + 1.6) % period;
+      const baseY = h * 0.55;
+
+      for (let x = 0; x < w; x++) {
+        const xPos = (x + offset) % period;
+        let y = baseY;
+
+        if (xPos >= 20 && xPos < 60) {
+          const t = (xPos - 20) / 40;
+          // PPG Pulse Profile with Dicrotic Notch
+          y -= Math.sin(t * Math.PI) * (h * 0.35) - (t > 0.5 ? Math.sin((t - 0.5) * Math.PI * 2) * 3 : 0);
+        }
+
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      animId = requestAnimationFrame(render);
+    };
+
+    render();
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={280}
+      height={32}
+      style={{
+        width: '100%',
+        height: '32px',
+        borderRadius: '5px',
+        border: '1px solid #bbf7d0',
+        display: 'block',
+        margin: '6px 0'
+      }}
+    />
+  );
+};
+
+// Live Blue Arterial Blood Pressure Waveform Canvas (Theme Responsive)
+const LiveBpWaveCanvas: React.FC = () => {
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+    let offset = 0;
+
+    const render = () => {
+      const w = canvas.width;
+      const h = canvas.height;
+      const isDark = document.body.classList.contains('dark-mode');
+
+      ctx.fillStyle = isDark ? '#061224' : '#eff6ff';
+      ctx.fillRect(0, 0, w, h);
+
+      // Grid
+      ctx.strokeStyle = isDark ? 'rgba(59, 130, 246, 0.12)' : 'rgba(37, 99, 235, 0.12)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= w; x += 12) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = 0; y <= h; y += 12) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      // Smooth Arterial BP Wave
+      ctx.strokeStyle = isDark ? '#60a5fa' : '#2563eb';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = isDark ? '#60a5fa' : 'rgba(37, 99, 235, 0.3)';
+      ctx.shadowBlur = isDark ? 6 : 3;
+      ctx.beginPath();
+
+      const period = 110;
+      offset = (offset + 1.5) % period;
+      const baseY = h * 0.58;
+
+      for (let x = 0; x < w; x++) {
+        const xPos = (x + offset) % period;
+        let y = baseY;
+
+        if (xPos >= 15 && xPos < 55) {
+          const t = (xPos - 15) / 40;
+          // Arterial pressure waveform curve
+          y -= Math.sin(t * Math.PI) * (h * 0.38) + Math.cos(t * Math.PI * 2) * 2;
+        }
+
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      animId = requestAnimationFrame(render);
+    };
+
+    render();
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={280}
+      height={32}
+      style={{
+        width: '100%',
+        height: '32px',
+        borderRadius: '5px',
+        border: '1px solid #bfdbfe',
+        display: 'block',
+        margin: '6px 0'
+      }}
+    />
+  );
 };
 
 // Continuous Pink Animated ECG Pulse Line Wave for Hero Card
@@ -584,6 +795,41 @@ const OverviewView: React.FC<{
 }> = ({ onSelectPatient, onStartRiskAssessment }) => {
   const [chartMode, setChartMode] = useState<'line_area' | 'line'>('line_area');
   const [showGoogleFitPanel, setShowGoogleFitPanel] = useState(false);
+
+  // Real-time telemetry vitals stream state
+  const [vitals, setVitals] = useState({
+    bpm: 67,
+    minBpm: 64,
+    maxBpm: 69,
+    spo2: 99,
+    sysBP: 112,
+    diaBP: 73,
+    beating: false
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setVitals(prev => {
+        const delta = Math.floor(Math.random() * 3) - 1; // -1, 0, +1
+        const nextBpm = Math.min(74, Math.max(62, prev.bpm + delta));
+        const nextSpo2 = Math.min(100, Math.max(98, prev.spo2 + (Math.random() > 0.8 ? (Math.random() > 0.5 ? 1 : -1) : 0)));
+        const nextSys = Math.min(116, Math.max(109, prev.sysBP + (Math.random() > 0.7 ? (Math.random() > 0.5 ? 1 : -1) : 0)));
+        const nextDia = Math.min(76, Math.max(71, prev.diaBP + (Math.random() > 0.7 ? (Math.random() > 0.5 ? 1 : -1) : 0)));
+        return {
+          bpm: nextBpm,
+          minBpm: Math.min(prev.minBpm, nextBpm),
+          maxBpm: Math.max(prev.maxBpm, nextBpm),
+          spo2: nextSpo2,
+          sysBP: nextSys,
+          diaBP: nextDia,
+          beating: true
+        };
+      });
+      setTimeout(() => setVitals(p => ({ ...p, beating: false })), 350);
+    }, 1800);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const highRiskPatients = [
     { row_id: 12, Age: 63, Sex: 'Male', ChestPainType: 'TA', RestingBP: 165, Cholesterol: 288, FastingBS: 1, RestingECG: 'ST', MaxHR: 150, ExerciseAngina: 'Yes', Oldpeak: 2.8, ST_Slope: 'Down', HeartDisease: 1, riskScore: 89, category: 'High Risk' },
@@ -669,7 +915,7 @@ const OverviewView: React.FC<{
         <HeroEcgPulseWave />
       </div>
 
-      {/* Light Vitals Telemetry Row */}
+      {/* Real-time Live Vitals Telemetry Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
         {/* Card 1: BPM PULSE */}
         <div style={{
@@ -686,11 +932,16 @@ const OverviewView: React.FC<{
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 800, letterSpacing: '0.5px' }}>BPM PULSE</span>
-            <span style={{ fontSize: '14px' }}>❤️</span>
+            <span style={{
+              fontSize: '14px',
+              transform: vitals.beating ? 'scale(1.3)' : 'scale(1)',
+              transition: 'transform 0.15s ease-out',
+              display: 'inline-block'
+            }}>❤️</span>
           </div>
           <div style={{ marginTop: '10px' }}>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827', lineHeight: 1 }}>
-              67 <span style={{ fontSize: '13px', color: '#6b7280', fontWeight: 600 }}>BPM</span>
+            <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827', lineHeight: 1, transition: 'all 0.2s ease' }}>
+              {vitals.bpm} <span style={{ fontSize: '13px', color: '#6b7280', fontWeight: 600 }}>BPM</span>
             </div>
             <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>Normal Range: 60-100</div>
           </div>
@@ -733,9 +984,9 @@ const OverviewView: React.FC<{
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#6b7280' }}>
-            <span>Range: 64 - 69</span>
+            <span>Range: {vitals.minBpm} - {vitals.maxBpm}</span>
             <span style={{ color: '#0891b2', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0891b2', display: 'inline-block' }}></span>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0891b2', display: 'inline-block', animation: 'pulse 1.5s infinite' }}></span>
               LIVE Real-time Stream
             </span>
           </div>
@@ -756,20 +1007,22 @@ const OverviewView: React.FC<{
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 800, letterSpacing: '0.5px' }}>PULSE OXIMETRY</span>
-            <span style={{ fontSize: '14px' }}>👥</span>
+            <span style={{ fontSize: '14px', color: '#16a34a' }}>🫁</span>
           </div>
-          <div style={{ marginTop: '10px' }}>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827', lineHeight: 1 }}>
-              99 <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: 600 }}>% SpO2</span>
+          <div style={{ marginTop: '6px' }}>
+            <div style={{ fontSize: '30px', fontWeight: 800, color: '#111827', lineHeight: 1, transition: 'all 0.2s ease' }}>
+              {vitals.spo2} <span style={{ fontSize: '13px', color: '#6b7280', fontWeight: 600 }}>% SpO2</span>
             </div>
           </div>
-          <div style={{ marginTop: '12px' }}>
-            <div style={{ width: '100%', height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden', marginBottom: '6px' }}>
-              <div style={{ width: '99%', height: '100%', background: '#22c55e' }}></div>
+
+
+          <div style={{ marginTop: '2px' }}>
+            <div style={{ width: '100%', height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden', marginBottom: '4px' }}>
+              <div style={{ width: `${vitals.spo2}%`, height: '100%', background: '#22c55e', transition: 'width 0.3s ease' }}></div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280' }}>
               <span>O₂ Saturation</span>
-              <span style={{ color: '#16a34a', fontWeight: 700 }}>Optimal</span>
+              <span style={{ color: '#16a34a', fontWeight: 700 }}>Optimal SpO₂</span>
             </div>
           </div>
         </div>
@@ -789,26 +1042,29 @@ const OverviewView: React.FC<{
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 800, letterSpacing: '0.5px' }}>BLOOD PRESSURE</span>
-            <span style={{ fontSize: '14px', color: '#3b82f6' }}>📈</span>
+            <span style={{ fontSize: '14px', color: '#2563eb' }}>📈</span>
           </div>
-          <div style={{ marginTop: '10px' }}>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827', lineHeight: 1 }}>
-              112<span style={{ fontSize: '20px', color: '#9ca3af' }}>/</span>73 <span style={{ fontSize: '13px', color: '#6b7280', fontWeight: 600 }}>mmHg</span>
+          <div style={{ marginTop: '6px' }}>
+            <div style={{ fontSize: '30px', fontWeight: 800, color: '#111827', lineHeight: 1, transition: 'all 0.2s ease' }}>
+              {vitals.sysBP}<span style={{ fontSize: '18px', fontWeight: 600, color: '#6b7280' }}>/</span>{vitals.diaBP} <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>mmHg</span>
             </div>
-            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>SYS / DIA arterial pressure</div>
           </div>
-          <div style={{ marginTop: '12px' }}>
+
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
             <span style={{
               background: '#dcfce7',
               border: '1px solid #bbf7d0',
               color: '#15803d',
-              fontSize: '11px',
+              fontSize: '10px',
               fontWeight: 700,
-              padding: '3px 10px',
-              borderRadius: '6px',
-              display: 'inline-block'
+              padding: '2px 8px',
+              borderRadius: '5px'
             }}>
               Normotensive
+            </span>
+            <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 600 }}>
+              MAP: {Math.round(vitals.diaBP + (vitals.sysBP - vitals.diaBP) / 3)} mmHg
             </span>
           </div>
         </div>
@@ -5237,9 +5493,18 @@ const SettingsView: React.FC = () => {
 };
 
 export default function App() {
-  const [activeMenu, setActiveMenu] = useState<'Overview' | 'EDA' | 'Model Performance' | 'Analytics' | 'Predictor' | 'Settings'>('Overview');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [activeMenu, setActiveMenu] = useState<'Overview' | 'EDA' | 'Model Performance' | 'Analytics' | 'Patient History' | 'Predictor' | 'Settings'>('Overview');
   const [datasetPage, setDatasetPage] = useState(1);
   const [datasetLimit, setDatasetLimit] = useState(10);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [theme]);
   const [datasetSearch, setDatasetSearch] = useState('');
   const [selectedPatientForReport, setSelectedPatientForReport] = useState<any>(null);
   const [patientReportPrediction, setPatientReportPrediction] = useState<PredictResponse | null>(null);
@@ -5339,6 +5604,7 @@ export default function App() {
     { id: 'EDA', label: 'Datasets', icon: <Activity className="sidebar-menu-icon" /> },
     { id: 'Model Performance', label: 'Model Performance', icon: <TrendingUp className="sidebar-menu-icon" /> },
     { id: 'Analytics', label: 'Analytics', icon: <BarChart2 className="sidebar-menu-icon" /> },
+    { id: 'Patient History', label: 'Patient History', icon: <Clipboard className="sidebar-menu-icon" /> },
     { id: 'Predictor', label: 'Predictor', icon: <Target className="sidebar-menu-icon" /> },
   ] as const;
 
@@ -5387,14 +5653,6 @@ export default function App() {
           </div>
         </nav>
 
-        <div className="sidebar-footer" style={{ background: '#EDF1F5', border: '1px solid #D1D8E0' }}>
-          <img src={drAlex} alt="Dr. Alex Carter" className="sidebar-avatar" />
-          <div className="sidebar-footer-text">
-            <div className="sidebar-footer-name" style={{ color: '#111827' }}>Dr. Alex Carter</div>
-            <div className="sidebar-footer-role" style={{ color: '#6B7280' }}>Cardiologist</div>
-          </div>
-          <ChevronDown size={14} style={{ color: '#6B7280' }} />
-        </div>
       </aside>
 
       {/* Main Panel Content */}
@@ -5405,9 +5663,14 @@ export default function App() {
             <span>👋</span> Welcome back, Dr. <span className="topbar-welcome-badge" style={{ background: '#dcfce7', color: '#15803d', fontWeight: 800 }}>Alex</span>
           </div>
           <div className="topbar-actions">
-            <div className="topbar-pill">
-              <Sun size={13} />
-              Light
+            <div 
+              className="topbar-pill"
+              onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              title="Toggle Light / Dark theme"
+            >
+              {theme === 'light' ? <Sun size={13} /> : <Moon size={13} />}
+              {theme === 'light' ? 'Light' : 'Dark'}
               <ChevronDown size={12} />
             </div>
             <div className="topbar-pill">
@@ -5441,6 +5704,8 @@ export default function App() {
           <ClinicalReportsView />
         ) : activeMenu === 'Analytics' ? (
           <AnalyticsView onNavigateToPatient={(patient) => { setSelectedPatientForReport(patient); setActiveMenu('Predictor'); }} />
+        ) : activeMenu === 'Patient History' ? (
+          <PatientHistoryView onSelectPatientReport={handleViewPatientReport} />
         ) : activeMenu === 'Predictor' && !selectedPatientForReport ? (
           <PredictorView
             initialPrediction={latestPrediction}
